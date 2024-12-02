@@ -20,9 +20,9 @@ const tools = [
     color: 'bg-blue-500',
   },
   {
-    title: 'Calculadora de Márgenes',
+    title: 'Suma de Precios',
     description: 'Calcula y optimiza tus márgenes de ganancia',
-    href: '/margins',
+    href: '/sumaPrecios',
     icon: PieChart,
     color: 'bg-purple-500',
   },

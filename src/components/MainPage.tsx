@@ -1,113 +1,297 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CostoBase } from './Costo-base'
-import { Comisiones } from './Comisiones'
-import { Envios } from './Envios'
-import { CamposOpcionales } from './Campos-Opcionales'
-import { Resultados } from './Resultados'
+import { Calculator } from 'lucide-react'
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
-interface Resultados {
-  precioPublicar: number;
-  margenGanancia: number;
-  cobroRecibir: number;
-  indicadorRentabilidad: 'verde' | 'amarillo' | 'rojo';
-  mensajeAdvertencia: string;
-}
+export default function MainPage() {
+  const [basePrice, setBasePrice] = useState<number>(0)
+  const [vat, setVat] = useState<string>("21")
+  const [installmentPlan, setInstallmentPlan] = useState<string>("0")
+  const [shippingType1, setShippingType1] = useState<number>(0)
+  const [shippingType2, setShippingType2] = useState<string>("5802.50")
+  const [useReasonability, setUseReasonability] = useState<boolean>(false)
+  const [competitor1, setCompetitor1] = useState<number>(0)
+  const [competitor2, setCompetitor2] = useState<number>(0)
+  const [minMargin, setMinMargin] = useState<number>(7.5)
+  const [desiredProfit, setDesiredProfit] = useState<number>(4500)
+  const [finalPrice, setFinalPrice] = useState<number>(0)
 
-export default function PrecioCalculator() {
-  const [costoBase, setCostoBase] = useState<number>(0)
-  const [iva, setIva] = useState<number>(0.105)
-  const [comisionFija, setComisionFija] = useState<number>(0.14)
-  const [comisionCuotas, setComisionCuotas] = useState<number>(0)
-  const [envioTipo1, setEnvioTipo1] = useState<number>(0)
-  const [envioTipo2, setEnvioTipo2] = useState<number>(5802.5)
-  const [tipoEnvioSeleccionado, setTipoEnvioSeleccionado] = useState<'tipo1' | 'tipo2'>('tipo1')
-  const [razonabilidad, setRazonabilidad] = useState<boolean>(false)
-  const [precioCompe1, setPrecioCompe1] = useState<number>(0)
-  const [precioCompe2, setPrecioCompe2] = useState<number>(0)
-  const [margenMinimo, setMargenMinimo] = useState<number>(0.075)
-  const [gananciaDeseada, setGananciaDeseada] = useState<number>(0)
-  const [resultados, setResultados] = useState<Resultados>({
-    precioPublicar: 0,
-    margenGanancia: 0,
-    cobroRecibir: 0,
-    indicadorRentabilidad: 'verde',
-    mensajeAdvertencia: '',
-  })
+  const FIXED_COMMISSION = 14
+  const TRANSACTION_FEE = 0.6
 
-  useEffect(() => {
-    calcularResultados()
-  }, [costoBase, iva, comisionFija, comisionCuotas, envioTipo1, envioTipo2, tipoEnvioSeleccionado, razonabilidad, precioCompe1, precioCompe2, margenMinimo, gananciaDeseada])
+  const shippingOptions = [
+    { weight: "1 a 2 Kg", price: 5802.50 },
+    { weight: "2 a 5 Kg", price: 7717.50 },
+    { weight: "5 a 10 Kg", price: 9166.00 },
+    { weight: "10 a 15 Kg", price: 10607.00 },
+    { weight: "15 a 20 Kg", price: 12441.50 },
+    { weight: "20 a 25 Kg", price: 14844.00 },
+    { weight: "25 a 30 Kg", price: 20374.00 },
+  ]
 
-  const calcularResultados = () => {
-    const costoTotal = costoBase * (1 + iva) * (1 + comisionFija + comisionCuotas)
-    const costoEnvio = tipoEnvioSeleccionado === 'tipo1' ? envioTipo1 : envioTipo2
-    const envioFinal = razonabilidad ? Math.max(costoEnvio, costoTotal * 0.3) : costoEnvio
-    const precioMinimo = costoTotal + envioFinal + gananciaDeseada
-    const precioPublicar = Math.max(precioMinimo, costoTotal / (1 - margenMinimo))
-    
-    const margenGanancia = (precioPublicar - costoTotal - envioFinal) / precioPublicar
-    const cobroRecibir = precioPublicar * 0.982 // Restando 0.6% tres veces
+  const installmentOptions = [
+    { label: "Sin cuotas", value: "0" },
+    { label: "3 cuotas mismo precio", value: "8.50" },
+    { label: "6 cuotas mismo precio", value: "14" },
+    { label: "3 cuotas simple", value: "6.43" },
+    { label: "6 cuotas simple", value: "12.27" },
+  ]
 
-    let indicadorRentabilidad: 'verde' | 'amarillo' | 'rojo' = 'verde'
-    if (margenGanancia < margenMinimo) {
-      indicadorRentabilidad = margenGanancia < margenMinimo / 2 ? 'rojo' : 'amarillo'
+  const calculateShippingAverage = () => {
+    const shipping1 = shippingType1
+    const shipping2 = parseFloat(shippingType2)
+
+    if (useReasonability && Math.abs(shipping1 - shipping2) > shipping1 * 0.3) {
+      const maxShipping = Math.max(shipping1, shipping2)
+      return maxShipping * 0.7
     }
 
-    let mensajeAdvertencia = ''
-    if (precioPublicar < costoTotal) {
-      mensajeAdvertencia = "El precio a publicar no cubre los costos básicos."
-    }
-
-    setResultados({
-      precioPublicar,
-      margenGanancia,
-      cobroRecibir,
-      indicadorRentabilidad,
-      mensajeAdvertencia,
-    })
+    return (shipping1 + shipping2) / 2
   }
 
+  const calculateFinalPrice = () => {
+    const vatAmount = basePrice * (parseInt(vat) / 100)
+    const priceWithVat = basePrice + vatAmount
+    
+    const fixedCommissionAmount = priceWithVat * (FIXED_COMMISSION / 100)
+    const installmentCommissionAmount = priceWithVat * (parseFloat(installmentPlan) / 100)
+    
+    const shippingAverage = calculateShippingAverage()
+    
+    const totalCosts = priceWithVat + fixedCommissionAmount + installmentCommissionAmount + shippingAverage
+    const transactionFees = totalCosts * (TRANSACTION_FEE / 100) * 3
+    
+
+
+    let finalPrice = totalCosts + transactionFees + desiredProfit
+
+    // Validar margen mínimo
+    const currentMargin = (desiredProfit / finalPrice) * 100
+    if (currentMargin < minMargin) {
+      finalPrice = desiredProfit / (minMargin / 100)
+    }
+
+
+
+    return totalCosts + transactionFees + desiredProfit
+  }
+
+  const getMarginColor = (currentMargin: number) => {
+    if (currentMargin >= minMargin) return "text-green-500"
+    if (currentMargin >= minMargin * 0.8) return "text-yellow-500"
+    return "text-red-500"
+  }
+
+  useEffect(() => {
+    const calculated = calculateFinalPrice()
+    setFinalPrice(calculated)
+  }, [basePrice, vat, installmentPlan, shippingType1, shippingType2, useReasonability, desiredProfit])
+
   return (
-    <div className="container mx-auto p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Calculadora de Precios</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <CostoBase costoBase={costoBase} setCostoBase={setCostoBase} iva={iva} setIva={setIva} />
-          <Comisiones 
-            comisionFija={comisionFija} 
-            setComisionFija={setComisionFija} 
-            comisionCuotas={comisionCuotas} 
-            setComisionCuotas={setComisionCuotas} 
-          />
-          <Envios 
-            envioTipo1={envioTipo1} 
-            setEnvioTipo1={setEnvioTipo1} 
-            envioTipo2={envioTipo2} 
-            setEnvioTipo2={setEnvioTipo2} 
-            tipoEnvioSeleccionado={tipoEnvioSeleccionado}
-            setTipoEnvioSeleccionado={setTipoEnvioSeleccionado}
-            razonabilidad={razonabilidad} 
-            setRazonabilidad={setRazonabilidad} 
-          />
-          <CamposOpcionales 
-            precioCompe1={precioCompe1}
-            setPrecioCompe1={setPrecioCompe1}
-            precioCompe2={precioCompe2}
-            setPrecioCompe2={setPrecioCompe2}
-            margenMinimo={margenMinimo}
-            setMargenMinimo={setMargenMinimo}
-            gananciaDeseada={gananciaDeseada}
-            setGananciaDeseada={setGananciaDeseada}
-          />
-          <Resultados resultados={resultados} precioCompe1={precioCompe1} precioCompe2={precioCompe2} />
-        </CardContent>
-      </Card>
-    </div>
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Calculator className="w-6 h-6" />
+          Herramienta para Publicar
+        </CardTitle>
+        <CardDescription>Ayuda para Vender</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <Label>Costo del Producto (sin IVA)</Label>
+              <Input
+                type="number"
+                value={basePrice || ''}
+                onChange={(e) => setBasePrice(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+
+            <div>
+              <Label>IVA</Label>
+              <Select value={vat} onValueChange={setVat}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar IVA" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10.5">10.5%</SelectItem>
+                  <SelectItem value="21">21%</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Comisión Cuotas</Label>
+              <Select value={installmentPlan} onValueChange={setInstallmentPlan}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar plan de cuotas" />
+                </SelectTrigger>
+                <SelectContent>
+                  {installmentOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label} ({option.value}%)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Envío Tipo 1</Label>
+              <Input
+                type="number"
+                value={shippingType1 || ''}
+                onChange={(e) => setShippingType1(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+
+            <div>
+              <Label>Envío Tipo 2</Label>
+              <Select value={shippingType2} onValueChange={setShippingType2}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar peso" />
+                </SelectTrigger>
+                <SelectContent>
+                  {shippingOptions.map((option) => (
+                    <SelectItem key={option.weight} value={option.price.toString()}>
+                      {option.weight}: ${option.price.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={useReasonability}
+                onCheckedChange={setUseReasonability}
+              />
+              <Label>Aplicar Razonabilidad (70%)</Label>
+            </div>
+          </div>
+
+          <div>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="optional">
+                <AccordionTrigger>
+                  <span className="text-sm font-medium">Campos Opcionales</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4">
+                  <div>
+                    <Label>Precio Competencia 1</Label>
+                    <Input
+                      type="number"
+                      value={competitor1 || ''}
+                      onChange={(e) => setCompetitor1(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Precio Competencia 2</Label>
+                    <Input
+                      type="number"
+                      value={competitor2 || ''}
+                      onChange={(e) => setCompetitor2(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Margen Mínimo Deseado (%)</Label>
+                    <Input
+                      type="number"
+                      value={minMargin || ''}
+                      onChange={(e) => setMinMargin(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Ganancia Deseada ($)</Label>
+                    <Input
+                      type="number"
+                      value={desiredProfit || ''}
+                      onChange={(e) => setDesiredProfit(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </div>
+
+        <div className="mt-8 p-6 bg-muted rounded-lg">
+          <h3 className="text-2xl font-bold mb-4">Resultados</h3>
+          
+          <div className="grid gap-4">
+            <div>
+              <span className="font-semibold">Precio a Publicar:</span>
+              <span className="ml-2 text-xl">
+                ${finalPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            <div>
+              <span className="font-semibold">Margen de Ganancia:</span>
+              <span className={`ml-2 ${getMarginColor((desiredProfit / finalPrice) * 100)}`}>
+                {((desiredProfit / finalPrice) * 100).toFixed(1)}% (${desiredProfit.toLocaleString('es-AR', { minimumFractionDigits: 2 })})
+              </span>
+            </div>
+
+            <div>
+              <span className="font-semibold">Cobro a Recibir:</span>
+              <div className="ml-4 space-y-1">
+                <div>Envío Tipo 1: ${(finalPrice - (finalPrice * (TRANSACTION_FEE / 100))).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</div>
+                <div>Envío Tipo 2: ${(finalPrice - (finalPrice * (TRANSACTION_FEE / 100))).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</div>
+                <div>Promedio: ${(finalPrice - (finalPrice * (TRANSACTION_FEE / 100))).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</div>
+              </div>
+            </div>
+
+            {(competitor1 > 0 || competitor2 > 0) && (
+              <div>
+                <span className="font-semibold">Comparativa Competencia:</span>
+                <div className="ml-4 space-y-1">
+                  {competitor1 > 0 && (
+                    <div>
+                      Competencia 1: ${competitor1.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      ({(((competitor1 - finalPrice) / finalPrice) * 100).toFixed(1)}% diferencia)
+                    </div>
+                  )}
+                  {competitor2 > 0 && (
+                    <div>
+                      Competencia 2: ${competitor2.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      ({(((competitor2 - finalPrice) / finalPrice) * 100).toFixed(1)}% diferencia)
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {basePrice > 0 && finalPrice < basePrice && (
+              <div className="text-red-500 font-semibold">
+                ¡Advertencia! El precio a publicar no cubre los costos básicos.
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

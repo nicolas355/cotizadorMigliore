@@ -1,10 +1,16 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { Calculator } from 'lucide-react'
+import { useState, useEffect } from "react"
+import { Calculator } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import {
   Accordion,
@@ -24,26 +30,28 @@ export default function MainPage() {
   const [basePrice, setBasePrice] = useState<number>(0)
   const [vat, setVat] = useState<string>("21")
   const [installmentPlan, setInstallmentPlan] = useState<string>("0")
-  const [shippingType1, setShippingType1] = useState<number>(0)
-  const [shippingType2, setShippingType2] = useState<string>("5802.50")
+  const [shippingBuenosAires, setShippingBuenosAires] = useState<number>(0)
+  const [shippingOutsideBuenosAires, setShippingOutsideBuenosAires] =
+    useState<string>("0")
   const [useReasonability, setUseReasonability] = useState<boolean>(false)
   const [competitor1, setCompetitor1] = useState<number>(0)
   const [competitor2, setCompetitor2] = useState<number>(0)
   const [minMargin, setMinMargin] = useState<number>(7.5)
   const [desiredProfit, setDesiredProfit] = useState<number>(4500)
-  const [finalPrice, setFinalPrice] = useState<number>(0)
 
+  // Fixed commission is now 14% (cannot be modified)
   const FIXED_COMMISSION = 14
   const TRANSACTION_FEE = 0.6
 
   const shippingOptions = [
-    { weight: "1 a 2 Kg", price: 5802.50 },
-    { weight: "2 a 5 Kg", price: 7717.50 },
-    { weight: "5 a 10 Kg", price: 9166.00 },
-    { weight: "10 a 15 Kg", price: 10607.00 },
-    { weight: "15 a 20 Kg", price: 12441.50 },
-    { weight: "20 a 25 Kg", price: 14844.00 },
-    { weight: "25 a 30 Kg", price: 20374.00 },
+    { weight: "Sin Envío", price: 0 },
+    { weight: "1 a 2 Kg", price: 5802.5 },
+    { weight: "2 a 5 Kg", price: 7717.5 },
+    { weight: "5 a 10 Kg", price: 9166.0 },
+    { weight: "10 a 15 Kg", price: 10607.0 },
+    { weight: "15 a 20 Kg", price: 12441.5 },
+    { weight: "20 a 25 Kg", price: 14844.0 },
+    { weight: "25 a 30 Kg", price: 20374.0 },
   ]
 
   const installmentOptions = [
@@ -55,42 +63,66 @@ export default function MainPage() {
   ]
 
   const calculateShippingAverage = () => {
-    const shipping1 = shippingType1
-    const shipping2 = parseFloat(shippingType2)
+    const shippingBA = shippingBuenosAires
+    const shippingOutside = parseFloat(shippingOutsideBuenosAires)
 
-    if (useReasonability && Math.abs(shipping1 - shipping2) > shipping1 * 0.3) {
-      const maxShipping = Math.max(shipping1, shipping2)
+    if (
+      useReasonability &&
+      Math.abs(shippingBA - shippingOutside) > shippingBA * 0.3
+    ) {
+      const maxShipping = Math.max(shippingBA, shippingOutside)
       return maxShipping * 0.7
     }
 
-    return (shipping1 + shipping2) / 2
+    return (shippingBA + shippingOutside) / 2
   }
 
   const calculateFinalPrice = () => {
+    // Calculate base price with VAT
     const vatAmount = basePrice * (parseInt(vat) / 100)
     const priceWithVat = basePrice + vatAmount
-    
+
+    // Apply fixed 14% commission and installment plan commission
     const fixedCommissionAmount = priceWithVat * (FIXED_COMMISSION / 100)
-    const installmentCommissionAmount = priceWithVat * (parseFloat(installmentPlan) / 100)
-    
+    const installmentCommissionAmount =
+      priceWithVat * (parseFloat(installmentPlan) / 100)
+
+    // Calculate shipping costs
     const shippingAverage = calculateShippingAverage()
-    
-    const totalCosts = priceWithVat + fixedCommissionAmount + installmentCommissionAmount + shippingAverage
+
+    // Calculate total costs before desired profit
+    const totalCosts =
+      priceWithVat +
+      fixedCommissionAmount +
+      installmentCommissionAmount +
+      shippingAverage
+
+    // Calculate transaction fees
     const transactionFees = totalCosts * (TRANSACTION_FEE / 100) * 3
-    
 
+    // Calculate initial selling price without considering desired profit
+    let sellingPrice = totalCosts + transactionFees
 
-    let finalPrice = totalCosts + transactionFees + desiredProfit
-
-    // Validar margen mínimo
-    const currentMargin = (desiredProfit / finalPrice) * 100
-    if (currentMargin < minMargin) {
-      finalPrice = desiredProfit / (minMargin / 100)
+    // Check if minimum margin is met
+    const calculateMargin = (price: number) => {
+      return (desiredProfit / price) * 100
     }
 
+    // Adjust price to meet minimum margin requirement
+    if (calculateMargin(sellingPrice) < minMargin) {
+      sellingPrice = desiredProfit / (minMargin / 100)
+    }
 
-
-    return totalCosts + transactionFees + desiredProfit
+    return {
+      baseSellingPrice: sellingPrice,
+      totalPriceWithProfit: sellingPrice + desiredProfit,
+      desiredProfit: desiredProfit,
+      margin: calculateMargin(sellingPrice),
+    }
+  }
+  const calculatePriceWithShipping = (shippingCost: number) => {
+   
+    return calculateFinalPrice().totalPriceWithProfit + shippingCost
   }
 
   const getMarginColor = (currentMargin: number) => {
@@ -99,10 +131,37 @@ export default function MainPage() {
     return "text-red-500"
   }
 
+  const [calculatedPrices, setCalculatedPrices] = useState({
+    baseSellingPrice: 0,
+    totalPriceWithProfit: 0, // MODIFICADO: Se agrega totalPriceWithProfit al estado
+    desiredProfit: 0,
+    margin: 0,
+  })
+
   useEffect(() => {
     const calculated = calculateFinalPrice()
-    setFinalPrice(calculated)
-  }, [basePrice, vat, installmentPlan, shippingType1, shippingType2, useReasonability, desiredProfit])
+    setCalculatedPrices(calculated)
+  }, [
+    basePrice,
+    vat,
+    installmentPlan,
+    shippingBuenosAires,
+    shippingOutsideBuenosAires,
+    useReasonability,
+    desiredProfit,
+    minMargin,
+  ])
+
+
+
+  // Calculate prices with shipping
+
+  const finalPriceWithBuenosAiresShipping = calculatePriceWithShipping(shippingBuenosAires)
+  const finalPriceWithOutsideShipping = calculatePriceWithShipping(parseFloat(shippingOutsideBuenosAires))
+  const averageShipping = (finalPriceWithBuenosAiresShipping + finalPriceWithOutsideShipping) / 2 // MODIFICADO: Se calcula el promedio con los precios de ganancia
+
+
+ 
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
@@ -120,7 +179,7 @@ export default function MainPage() {
               <Label>Costo del Producto (sin IVA)</Label>
               <Input
                 type="number"
-                value={basePrice || ''}
+                value={basePrice || ""}
                 onChange={(e) => setBasePrice(parseFloat(e.target.value) || 0)}
               />
             </div>
@@ -140,7 +199,10 @@ export default function MainPage() {
 
             <div>
               <Label>Comisión Cuotas</Label>
-              <Select value={installmentPlan} onValueChange={setInstallmentPlan}>
+              <Select
+                value={installmentPlan}
+                onValueChange={setInstallmentPlan}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar plan de cuotas" />
                 </SelectTrigger>
@@ -155,24 +217,35 @@ export default function MainPage() {
             </div>
 
             <div>
-              <Label>Envío Tipo 1</Label>
+              <Label>Envío Provincia de Buenos Aires</Label>
               <Input
                 type="number"
-                value={shippingType1 || ''}
-                onChange={(e) => setShippingType1(parseFloat(e.target.value) || 0)}
+                value={shippingBuenosAires || ""}
+                onChange={(e) =>
+                  setShippingBuenosAires(parseFloat(e.target.value) || 0)
+                }
               />
             </div>
 
             <div>
-              <Label>Envío Tipo 2</Label>
-              <Select value={shippingType2} onValueChange={setShippingType2}>
+              <Label>Envío Fuera de Buenos Aires</Label>
+              <Select
+                value={shippingOutsideBuenosAires}
+                onValueChange={setShippingOutsideBuenosAires}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar peso" />
                 </SelectTrigger>
                 <SelectContent>
                   {shippingOptions.map((option) => (
-                    <SelectItem key={option.weight} value={option.price.toString()}>
-                      {option.weight}: ${option.price.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    <SelectItem
+                      key={option.weight}
+                      value={option.price.toString()}
+                    >
+                      {option.weight}: $
+                      {option.price.toLocaleString("es-AR", {
+                        minimumFractionDigits: 2,
+                      })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -199,8 +272,10 @@ export default function MainPage() {
                     <Label>Precio Competencia 1</Label>
                     <Input
                       type="number"
-                      value={competitor1 || ''}
-                      onChange={(e) => setCompetitor1(parseFloat(e.target.value) || 0)}
+                      value={competitor1 || ""}
+                      onChange={(e) =>
+                        setCompetitor1(parseFloat(e.target.value) || 0)
+                      }
                     />
                   </div>
 
@@ -208,8 +283,10 @@ export default function MainPage() {
                     <Label>Precio Competencia 2</Label>
                     <Input
                       type="number"
-                      value={competitor2 || ''}
-                      onChange={(e) => setCompetitor2(parseFloat(e.target.value) || 0)}
+                      value={competitor2 || ""}
+                      onChange={(e) =>
+                        setCompetitor2(parseFloat(e.target.value) || 0)
+                      }
                     />
                   </div>
 
@@ -217,8 +294,10 @@ export default function MainPage() {
                     <Label>Margen Mínimo Deseado (%)</Label>
                     <Input
                       type="number"
-                      value={minMargin || ''}
-                      onChange={(e) => setMinMargin(parseFloat(e.target.value) || 0)}
+                      value={minMargin || ""}
+                      onChange={(e) =>
+                        setMinMargin(parseFloat(e.target.value) || 0)
+                      }
                     />
                   </div>
 
@@ -226,8 +305,10 @@ export default function MainPage() {
                     <Label>Ganancia Deseada ($)</Label>
                     <Input
                       type="number"
-                      value={desiredProfit || ''}
-                      onChange={(e) => setDesiredProfit(parseFloat(e.target.value) || 0)}
+                      value={desiredProfit || ""}
+                      onChange={(e) =>
+                        setDesiredProfit(parseFloat(e.target.value) || 0)
+                      }
                     />
                   </div>
                 </AccordionContent>
@@ -238,28 +319,95 @@ export default function MainPage() {
 
         <div className="mt-8 p-6 bg-muted rounded-lg">
           <h3 className="text-2xl font-bold mb-4">Resultados</h3>
-          
+
           <div className="grid gap-4">
             <div>
-              <span className="font-semibold">Precio a Publicar:</span>
+              <div>
+                <span className="font-semibold">
+                  Precio a Publicar (sin Ganancia):
+                </span>
+                <span className="ml-2 text-xl">
+                  $
+                  {calculatedPrices.baseSellingPrice.toLocaleString("es-AR", {
+                    minimumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+
+              <span className="font-semibold">
+                Precio Total (Precio + Ganancia):
+              </span>
               <span className="ml-2 text-xl">
-                ${finalPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                $
+                {calculatedPrices.totalPriceWithProfit.toLocaleString("es-AR", {
+                  minimumFractionDigits: 2,
+                })}
               </span>
             </div>
 
             <div>
               <span className="font-semibold">Margen de Ganancia:</span>
-              <span className={`ml-2 ${getMarginColor((desiredProfit / finalPrice) * 100)}`}>
-                {((desiredProfit / finalPrice) * 100).toFixed(1)}% (${desiredProfit.toLocaleString('es-AR', { minimumFractionDigits: 2 })})
+              <span
+                className={`ml-2 ${getMarginColor(calculatedPrices.margin)}`}
+              >
+                {calculatedPrices.margin.toFixed(1)}%
               </span>
             </div>
 
             <div>
               <span className="font-semibold">Cobro a Recibir:</span>
               <div className="ml-4 space-y-1">
-                <div>Envío Tipo 1: ${(finalPrice - (finalPrice * (TRANSACTION_FEE / 100))).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</div>
-                <div>Envío Tipo 2: ${(finalPrice - (finalPrice * (TRANSACTION_FEE / 100))).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</div>
-                <div>Promedio: ${(finalPrice - (finalPrice * (TRANSACTION_FEE / 100))).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</div>
+                <div className="mb-2">
+                  <h2>
+                    {" "}
+                    Envío en Buenos Aires:
+                    <span className="text-neutral-950   border-2 border-violet-600 p-1 mr-1 text-lg font-bold">
+                      $
+                      {finalPriceWithBuenosAiresShipping.toLocaleString(
+                        "es-AR",
+                        { minimumFractionDigits: 2 }
+                      )} {`=>`} {" "}
+                    </span>
+                    (Precio: $
+                      {calculatedPrices.totalPriceWithProfit.toLocaleString("es-AR", {
+                  minimumFractionDigits: 2,
+                })}{" "}
+                    + Envío 1: $
+                    {shippingBuenosAires.toLocaleString("es-AR", {
+                      minimumFractionDigits: 2,
+                    })}
+                    ){"  "} 
+                  </h2>
+                </div>
+                <div>
+                  <h2>
+                    {" "}
+                    Envío Fuera de Buenos Aires:{" "}
+                    <span className="text-neutral-950  border-2 border-violet-600 p-1 mr-1 text-lg font-bold">
+                      {" "}
+                      $
+                      {finalPriceWithOutsideShipping.toLocaleString("es-AR", {
+                        minimumFractionDigits: 2,
+                      })}{" "} {`=>`}
+                    </span>{" "}
+                    (Precio: $    {calculatedPrices.totalPriceWithProfit.toLocaleString("es-AR", {
+                  minimumFractionDigits: 2,
+                })}
+                  {" "}
+                    + Envío 2: $
+                    {parseFloat(shippingOutsideBuenosAires).toLocaleString(
+                      "es-AR",
+                      { minimumFractionDigits: 2 }
+                    )}
+                    ){" "}
+                  </h2>
+                </div>
+                <div>
+                  <h2 className="mt-2">       Promedio de Envío: 
+                 <span className="border-2 border-violet-600 p-1 mr-1 text-lg font-bold">                ${averageShipping.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                 </span></h2>
+           
+                </div>
               </div>
             </div>
 
@@ -269,21 +417,39 @@ export default function MainPage() {
                 <div className="ml-4 space-y-1">
                   {competitor1 > 0 && (
                     <div>
-                      Competencia 1: ${competitor1.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                      ({(((competitor1 - finalPrice) / finalPrice) * 100).toFixed(1)}% diferencia)
+                      Competencia 1: $
+                      {competitor1.toLocaleString("es-AR", {
+                        minimumFractionDigits: 2,
+                      })}
+                      (
+                      {(
+                        ((competitor1 - calculatedPrices.baseSellingPrice) /
+                          calculatedPrices.baseSellingPrice) *
+                        100
+                      ).toFixed(1)}
+                      % diferencia)
                     </div>
                   )}
                   {competitor2 > 0 && (
                     <div>
-                      Competencia 2: ${competitor2.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                      ({(((competitor2 - finalPrice) / finalPrice) * 100).toFixed(1)}% diferencia)
+                      Competencia 2: $
+                      {competitor2.toLocaleString("es-AR", {
+                        minimumFractionDigits: 2,
+                      })}
+                      (
+                      {(
+                        ((competitor2 - calculatedPrices.baseSellingPrice) /
+                          calculatedPrices.baseSellingPrice) *
+                        100
+                      ).toFixed(1)}
+                      % diferencia)
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {basePrice > 0 && finalPrice < basePrice && (
+            {basePrice > 0 && calculatedPrices.baseSellingPrice < basePrice && (
               <div className="text-red-500 font-semibold">
                 ¡Advertencia! El precio a publicar no cubre los costos básicos.
               </div>
@@ -294,4 +460,3 @@ export default function MainPage() {
     </Card>
   )
 }
-

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Calculator } from "lucide-react"
+import { Calendar, DollarSign, Percent, Truck } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -11,13 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
+
 import {
   Card,
   CardContent,
@@ -28,7 +22,7 @@ import {
 
 export default function MainPage() {
   const [basePrice, setBasePrice] = useState<number>(0)
-  const [vat, setVat] = useState<string>("21")
+  const [vat] = useState<string>("21")
   const [installmentPlan, setInstallmentPlan] = useState<string>("0")
   const [shippingBuenosAires, setShippingBuenosAires] = useState<number>(0)
   const [shippingOutsideBuenosAires, setShippingOutsideBuenosAires] =
@@ -37,12 +31,12 @@ export default function MainPage() {
   const [competitor1, setCompetitor1] = useState<number>(0)
   const [competitor2, setCompetitor2] = useState<number>(0)
   const [minMargin, setMinMargin] = useState<number>(7.5)
-  const [desiredProfit, setDesiredProfit] = useState<number>(4500)
+  const [desiredProfit] = useState<number>(4500)
 
-  // Fixed commission is now 14% (cannot be modified)
+  // Comisión fija del marketplace
   const FIXED_COMMISSION = 14
-  const TRANSACTION_FEE = 0.6
 
+  // Opciones de envío
   const shippingOptions = [
     { weight: "Sin Envío", price: 0 },
     { weight: "1 a 2 Kg", price: 5802.5 },
@@ -55,168 +49,200 @@ export default function MainPage() {
   ]
 
   const installmentOptions = [
-    { label: "Sin cuotas", value: "0" },
-    { label: "3 cuotas mismo precio", value: "8.50" },
-    { label: "6 cuotas mismo precio", value: "14" },
-    { label: "3 cuotas simple", value: "6.43" },
-    { label: "6 cuotas simple", value: "12.27" },
+    { label: "Sin Cuotas (0%)", value: "0" },
+    { label: "3 cuotas al mismo precio (8,50%)", value: "8.50" },
+    { label: "6 cuotas al mismo precio (14,00%)", value: "14" },
+    { label: "3 cuotas (CUOTA SIMPLE) - (6,43%)", value: "6.43" },
+    { label: "6 cuotas (CUOTA SIMPLE) - (12,27%)", value: "12.27" },
   ]
 
-  const calculateShippingAverage = () => {
-    const shippingBA = shippingBuenosAires
-    const shippingOutside = parseFloat(shippingOutsideBuenosAires)
-
-    if (
-      useReasonability &&
-      Math.abs(shippingBA - shippingOutside) > shippingBA * 0.3
-    ) {
-      const maxShipping = Math.max(shippingBA, shippingOutside)
-      return maxShipping * 0.7
-    }
-
-    return (shippingBA + shippingOutside) / 2
-  }
-
+  // Cálculo del precio final
   const calculateFinalPrice = () => {
-    // Calculate base price with VAT
-    const vatAmount = basePrice * (parseInt(vat) / 100)
-    const priceWithVat = basePrice + vatAmount
+    // 1. Calcular costo total con IVA
+    const priceWithVat = basePrice * (1 + parseFloat(vat) / 100)
 
-    // Apply fixed 14% commission and installment plan commission
-    const fixedCommissionAmount = priceWithVat * (FIXED_COMMISSION / 100)
-    const installmentCommissionAmount =
-      priceWithVat * (parseFloat(installmentPlan) / 100)
+    // 2. Agregar margen mínimo deseado (7.5%)
+    const priceWithMinMargin = priceWithVat * (1 + minMargin / 100)
 
-    // Calculate shipping costs
-    const shippingAverage = calculateShippingAverage()
+    // 3. Sumar la ganancia deseada fija ($4500 por defecto)
+    const priceWithProfit = priceWithMinMargin + desiredProfit
 
-    // Calculate total costs before desired profit
-    const totalCosts =
-      priceWithVat +
-      fixedCommissionAmount +
-      installmentCommissionAmount +
-      shippingAverage
+    // 4. Incluir el promedio del costo de envío
+    const shippingOutside = parseFloat(shippingOutsideBuenosAires) || 0
 
-    // Calculate transaction fees
-    const transactionFees = totalCosts * (TRANSACTION_FEE / 100) * 3
+    const priceWithBAShipping = priceWithProfit + shippingBuenosAires
+    const priceWithOutsideShipping = priceWithProfit + shippingOutside
 
-    // Calculate initial selling price without considering desired profit
-    let sellingPrice = totalCosts + transactionFees
 
-    // Check if minimum margin is met
-    const calculateMargin = (price: number) => {
-      return (desiredProfit / price) * 100
-    }
+    
 
-    // Adjust price to meet minimum margin requirement
-    if (calculateMargin(sellingPrice) < minMargin) {
-      sellingPrice = desiredProfit / (minMargin / 100)
-    }
+    // 5. Ajustar por la comisión del marketplace (14%)
 
+    // 6. Ajustar por la comisión de cuotas
+    let averageShippingPrice =
+      (priceWithBAShipping + priceWithOutsideShipping) / 2
+
+
+        // **Aplicar lógica de razonabilidad**
+
+
+
+        if (useReasonability) {
+          const difference = Math.abs(shippingBuenosAires - shippingOutside);
+          const threshold = shippingBuenosAires * 0.3; // 30% como diferencia significativa
+      
+          if (difference > threshold) {
+            averageShippingPrice *= 0.7; // Aplicar el 70% de descuento
+          }
+        }
+    const installmentCommission = parseFloat(installmentPlan) / 100
+
+    const finalPrice = averageShippingPrice / (1 - FIXED_COMMISSION / 100)
+    const finalPriceWithInstallments = finalPrice * (1 + installmentCommission)
+
+    // Redondear a 2 decimales
     return {
-      baseSellingPrice: sellingPrice,
-      totalPriceWithProfit: sellingPrice + desiredProfit,
-      desiredProfit: desiredProfit,
-      margin: calculateMargin(sellingPrice),
+      priceWithVat: parseFloat(priceWithVat.toFixed(2)),
+      priceWithBAShipping: parseFloat(priceWithBAShipping.toFixed(2)),
+      priceWithOutsideShipping: parseFloat(priceWithOutsideShipping.toFixed(2)),
+      averageShippingPrice: parseFloat(averageShippingPrice.toFixed(2)),
+      finalPrice: Number(finalPriceWithInstallments.toFixed(2)),
     }
   }
-  const calculatePriceWithShipping = (shippingCost: number) => {
-   
-    return calculateFinalPrice().totalPriceWithProfit + shippingCost
-  }
-
-  const getMarginColor = (currentMargin: number) => {
-    if (currentMargin >= minMargin) return "text-green-500"
-    if (currentMargin >= minMargin * 0.8) return "text-yellow-500"
-    return "text-red-500"
-  }
-
   const [calculatedPrices, setCalculatedPrices] = useState({
-    baseSellingPrice: 0,
-    totalPriceWithProfit: 0, // MODIFICADO: Se agrega totalPriceWithProfit al estado
-    desiredProfit: 0,
-    margin: 0,
+    priceWithVat: 0,
+    priceWithBAShipping: 0,
+    priceWithOutsideShipping: 0,
+    averageShippingPrice: 0,
+    finalPrice: 0,
   })
 
   useEffect(() => {
     const calculated = calculateFinalPrice()
-    setCalculatedPrices(calculated)
+    setCalculatedPrices({ ...calculated })
   }, [
     basePrice,
     vat,
-    installmentPlan,
     shippingBuenosAires,
     shippingOutsideBuenosAires,
-    useReasonability,
     desiredProfit,
     minMargin,
+    installmentPlan,
+    useReasonability,
   ])
 
+  // Margen de ganancia
 
+  {
+    /* const getMarginColor = (currentMargin: number) => {
+    if (currentMargin >= minMargin) return "text-green-500"
+    if (currentMargin >= minMargin * 0.8) return "text-yellow-500"
+    return "text-red-500"
+  }*/
+  }
 
-  // Calculate prices with shipping
+  const getDifferenceText = (competitorPrice: number, finalPrice: number) => {
+    if (!competitorPrice || !finalPrice) return "Sin información"
 
-  const finalPriceWithBuenosAiresShipping = calculatePriceWithShipping(shippingBuenosAires)
-  const finalPriceWithOutsideShipping = calculatePriceWithShipping(parseFloat(shippingOutsideBuenosAires))
-  const averageShipping = (finalPriceWithBuenosAiresShipping + finalPriceWithOutsideShipping) / 2 // MODIFICADO: Se calcula el promedio con los precios de ganancia
-
-
- 
+    const difference = ((competitorPrice - finalPrice) / finalPrice) * 100
+    const formattedDifference =
+      Math.abs(difference) < 0.1
+        ? "No hay diferencia"
+        : `${difference.toFixed(1)}%`
+    return formattedDifference
+  }
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calculator className="w-6 h-6" />
-          Herramienta para Publicar
+        <CardTitle className="text-center text-2xl font-bold">
+          Cotizador Para Eccomerce
         </CardTitle>
-        <CardDescription>Ayuda para Vender</CardDescription>
+        <CardDescription className="text-center"></CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
+        {/* Primera Fila: Valor del Producto */}
+        <div className="flex justify-center">
+          <div className="flex items-center space-x-4">
+            <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center">
+              <DollarSign className="w-8 h-8 text-white" />
+            </div>
             <div>
-              <Label>Costo del Producto (sin IVA)</Label>
+              <Label>Valor del Producto</Label>
               <Input
                 type="number"
                 value={basePrice || ""}
                 onChange={(e) => setBasePrice(parseFloat(e.target.value) || 0)}
               />
             </div>
+          </div>
+        </div>
 
-            <div>
-              <Label>IVA</Label>
-              <Select value={vat} onValueChange={setVat}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar IVA" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10.5">10.5%</SelectItem>
-                  <SelectItem value="21">21%</SelectItem>
-                </SelectContent>
-              </Select>
+        {/* Segunda Sección: Todos los Campos en Tres Columnas */}
+        <div className="grid grid-cols-3 gap-8">
+          {/* Comisión Fija */}
+          <div className="flex items-start space-x-4">
+            <div className="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center">
+              <Percent className="w-8 h-8 text-white" />
             </div>
+            <div className="flex-grow">
+              <Label>Comisión Fija (%)</Label>
+              <Input placeholder="14" value={FIXED_COMMISSION} readOnly />
+            </div>
+          </div>
 
-            <div>
-              <Label>Comisión Cuotas</Label>
+          {/* Plan de Cuotas */}
+          <div className="flex items-start space-x-4">
+            <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center">
+              <Calendar className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-grow">
+              <Label>Plan de Cuotas</Label>
               <Select
                 value={installmentPlan}
                 onValueChange={setInstallmentPlan}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar plan de cuotas" />
+                  <SelectValue placeholder="Seleccionar cuotas" />
                 </SelectTrigger>
                 <SelectContent>
                   {installmentOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
-                      {option.label} ({option.value}%)
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            <div>
+          {/* Margen Mínimo Deseado (%) */}
+          <div className="flex items-start space-x-4 mt-4">
+            <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center">
+              <Percent className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-grow">
+              <Label>Margen Mínimo Deseado (%)</Label>
+              <Input
+                type="number"
+                value={minMargin || ""}
+                onChange={(e) => setMinMargin(parseFloat(e.target.value) || 0)}
+              />
+              <span className="text-sm text-gray-500 mt-2 block">
+                Margen aplicado:{" "}
+                {minMargin > 0 ? `${minMargin.toFixed(2)}%` : "Sin margen"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3">
+          {/* Costo de Envío */}
+          <div className="flex items-start space-x-4">
+            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
+              <Truck className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-grow">
               <Label>Envío Provincia de Buenos Aires</Label>
               <Input
                 type="number"
@@ -226,8 +252,14 @@ export default function MainPage() {
                 }
               />
             </div>
+          </div>
 
-            <div>
+          {/* Envío Fuera de Buenos Aires */}
+          <div className="flex items-start space-x-4">
+            <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center">
+              <Truck className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-grow">
               <Label>Envío Fuera de Buenos Aires</Label>
               <Select
                 value={shippingOutsideBuenosAires}
@@ -251,207 +283,186 @@ export default function MainPage() {
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={useReasonability}
-                onCheckedChange={setUseReasonability}
-              />
-              <Label>Aplicar Razonabilidad (70%)</Label>
-            </div>
           </div>
 
-          <div>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="optional">
-                <AccordionTrigger>
-                  <span className="text-sm font-medium">Campos Opcionales</span>
-                </AccordionTrigger>
-                <AccordionContent className="space-y-4">
-                  <div>
-                    <Label>Precio Competencia 1</Label>
-                    <Input
-                      type="number"
-                      value={competitor1 || ""}
-                      onChange={(e) =>
-                        setCompetitor1(parseFloat(e.target.value) || 0)
-                      }
-                    />
-                  </div>
+          <div className="flex items-center justify-between p-4 bg-gray-100 rounded-lg shadow-sm ">
+            {/* Descripción */}
+            <div className="flex items-center space-x-4">
+              {/* Ícono */}
+              <div className="flex items-center justify-center w-12 h-12 bg-gray-900 text-white rounded-full">
+                <span className="text-xl font-bold">ℹ️</span>
+              </div>
 
-                  <div>
-                    <Label>Precio Competencia 2</Label>
-                    <Input
-                      type="number"
-                      value={competitor2 || ""}
-                      onChange={(e) =>
-                        setCompetitor2(parseFloat(e.target.value) || 0)
-                      }
-                    />
-                  </div>
+              {/* Texto */}
 
-                  <div>
-                    <Label>Margen Mínimo Deseado (%)</Label>
-                    <Input
-                      type="number"
-                      value={minMargin || ""}
-                      onChange={(e) =>
-                        setMinMargin(parseFloat(e.target.value) || 0)
-                      }
-                    />
-                  </div>
+              <h2>Razonabilidad</h2>
+            </div>
 
-                  <div>
-                    <Label>Ganancia Deseada ($)</Label>
-                    <Input
-                      type="number"
-                      value={desiredProfit || ""}
-                      onChange={(e) =>
-                        setDesiredProfit(parseFloat(e.target.value) || 0)
-                      }
-                    />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+            {/* Checkbox */}
+            <input
+              type="checkbox"
+              checked={useReasonability}
+              onChange={() => setUseReasonability(!useReasonability)}
+              className="w-6 h-6 border-gray-400 rounded-md focus:ring-2 focus:ring-blue-500"
+            />
           </div>
         </div>
 
-        <div className="mt-8 p-6 bg-muted rounded-lg">
-          <h3 className="text-2xl font-bold mb-4">Resultados</h3>
+        <div className="grid grid-cols-3">
+          {/* Precio Competencia 1 */}
+          <div className="flex items-start space-x-4">
+            <div className="w-16 h-16 bg-teal-500 rounded-full flex items-center justify-center">
+              <DollarSign className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-grow">
+              <Label>Precio Competencia 1</Label>
+              <Input
+                type="number"
+                value={competitor1 || ""}
+                onChange={(e) =>
+                  setCompetitor1(parseFloat(e.target.value) || 0)
+                }
+              />
+            </div>
+          </div>
 
-          <div className="grid gap-4">
-            <div>
-              <div>
-                <span className="font-semibold">
-                  Precio a Publicar (sin Ganancia):
-                </span>
-                <span className="ml-2 text-xl">
-                  $
-                  {calculatedPrices.baseSellingPrice.toLocaleString("es-AR", {
+          {/* Precio Competencia 2 */}
+          <div className="flex items-start space-x-4">
+            <div className="w-16 h-16 bg-teal-500 rounded-full flex items-center justify-center">
+              <DollarSign className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-grow">
+              <Label>Precio Competencia 2</Label>
+              <Input
+                type="number"
+                value={competitor2 || ""}
+                onChange={(e) =>
+                  setCompetitor2(parseFloat(e.target.value) || 0)
+                }
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Resultados */}
+
+        <div className="bg-gray-900 text-gray-100 p-6 rounded-lg  mx-auto">
+          <h2 className="text-2xl font-bold mb-4 border-b border-gray-700 pb-2 text-center">
+            Cotización Detallada
+          </h2>
+          <div className="space-y-4">
+            {/* Precio con IVA */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">Precio con IVA</span>
+              <span className="text-xl">
+                $
+                {calculatedPrices.priceWithVat.toLocaleString("es-AR", {
+                  minimumFractionDigits: 2,
+                })}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">
+                Precio + Envío 1
+                <span className="text-sm text-gray-500 ml-2">
+                  (
+                  {calculatedPrices.priceWithVat.toLocaleString("es-AR", {
+                    minimumFractionDigits: 2,
+                  })}{" "}
+                  +{" "}
+                  {shippingBuenosAires.toLocaleString("es-AR", {
                     minimumFractionDigits: 2,
                   })}
+                  )
+                </span>
+              </span>
+              <span className="text-xl">
+                $
+                {calculatedPrices.priceWithBAShipping.toLocaleString("es-AR", {
+                  minimumFractionDigits: 2,
+                })}
+              </span>
+            </div>
+
+            {/* Precio + Envío 2 */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">
+                Precio + Envío 2
+                <span className="text-sm text-gray-500 ml-2">
+                  (
+                  {calculatedPrices.priceWithVat.toLocaleString("es-AR", {
+                    minimumFractionDigits: 2,
+                  })}{" "}
+                  +{" "}
+                  {parseFloat(shippingOutsideBuenosAires || "0").toLocaleString(
+                    "es-AR",
+                    {
+                      minimumFractionDigits: 2,
+                    }
+                  )}
+                  )
+                </span>
+              </span>
+              <span className="text-xl">
+                $
+                {calculatedPrices.priceWithOutsideShipping.toLocaleString(
+                  "es-AR",
+                  {
+                    minimumFractionDigits: 2,
+                  }
+                )}
+              </span>
+            </div>
+
+            {/* Promedio */}
+            <div className="flex justify-between items-center border-t border-gray-700 pt-2">
+              <span className="text-gray-400">Promedio</span>
+              <span className="text-xl font-medium">
+                $
+                {calculatedPrices.averageShippingPrice.toLocaleString("es-AR", {
+                  minimumFractionDigits: 2,
+                })}
+              </span>
+            </div>
+
+            {/* Precio Final */}
+            <div className="flex justify-between items-center border-t border-gray-700 pt-2">
+              <span className="text-gray-400">Precio Final</span>
+              <span className="text-2xl font-bold text-green-400">
+                $
+                {calculatedPrices.finalPrice.toLocaleString("es-AR", {
+                  minimumFractionDigits: 2,
+                })}
+              </span>
+            </div>
+          </div>
+
+          {/* Competencias */}
+          <div className="mt-6 text-sm text-gray-500">
+            {competitor1 > 0 && (
+              <div className="flex justify-between items-center">
+                <span>Precio Competencia 1:</span>
+                <span>
+                  $
+                  {competitor1.toLocaleString("es-AR", {
+                    minimumFractionDigits: 2,
+                  })}{" "}
+                  ({getDifferenceText(competitor1, calculatedPrices.finalPrice)}
+                  )
                 </span>
               </div>
-
-              <span className="font-semibold">
-                Precio Total (Precio + Ganancia):
-              </span>
-              <span className="ml-2 text-xl">
-                $
-                {calculatedPrices.totalPriceWithProfit.toLocaleString("es-AR", {
-                  minimumFractionDigits: 2,
-                })}
-              </span>
-            </div>
-
-            <div>
-              <span className="font-semibold">Margen de Ganancia:</span>
-              <span
-                className={`ml-2 ${getMarginColor(calculatedPrices.margin)}`}
-              >
-                {calculatedPrices.margin.toFixed(1)}%
-              </span>
-            </div>
-
-            <div>
-              <span className="font-semibold">Cobro a Recibir:</span>
-              <div className="ml-4 space-y-1">
-                <div className="mb-2">
-                  <h2>
-                    {" "}
-                    Envío en Buenos Aires:
-                    <span className="text-neutral-950   border-2 border-violet-600 p-1 mr-1 text-lg font-bold">
-                      $
-                      {finalPriceWithBuenosAiresShipping.toLocaleString(
-                        "es-AR",
-                        { minimumFractionDigits: 2 }
-                      )} {`=>`} {" "}
-                    </span>
-                    (Precio: $
-                      {calculatedPrices.totalPriceWithProfit.toLocaleString("es-AR", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                    + Envío 1: $
-                    {shippingBuenosAires.toLocaleString("es-AR", {
-                      minimumFractionDigits: 2,
-                    })}
-                    ){"  "} 
-                  </h2>
-                </div>
-                <div>
-                  <h2>
-                    {" "}
-                    Envío Fuera de Buenos Aires:{" "}
-                    <span className="text-neutral-950  border-2 border-violet-600 p-1 mr-1 text-lg font-bold">
-                      {" "}
-                      $
-                      {finalPriceWithOutsideShipping.toLocaleString("es-AR", {
-                        minimumFractionDigits: 2,
-                      })}{" "} {`=>`}
-                    </span>{" "}
-                    (Precio: $    {calculatedPrices.totalPriceWithProfit.toLocaleString("es-AR", {
-                  minimumFractionDigits: 2,
-                })}
-                  {" "}
-                    + Envío 2: $
-                    {parseFloat(shippingOutsideBuenosAires).toLocaleString(
-                      "es-AR",
-                      { minimumFractionDigits: 2 }
-                    )}
-                    ){" "}
-                  </h2>
-                </div>
-                <div>
-                  <h2 className="mt-2">       Promedio de Envío: 
-                 <span className="border-2 border-violet-600 p-1 mr-1 text-lg font-bold">                ${averageShipping.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                 </span></h2>
-           
-                </div>
-              </div>
-            </div>
-
-            {(competitor1 > 0 || competitor2 > 0) && (
-              <div>
-                <span className="font-semibold">Comparativa Competencia:</span>
-                <div className="ml-4 space-y-1">
-                  {competitor1 > 0 && (
-                    <div>
-                      Competencia 1: $
-                      {competitor1.toLocaleString("es-AR", {
-                        minimumFractionDigits: 2,
-                      })}
-                      (
-                      {(
-                        ((competitor1 - calculatedPrices.baseSellingPrice) /
-                          calculatedPrices.baseSellingPrice) *
-                        100
-                      ).toFixed(1)}
-                      % diferencia)
-                    </div>
-                  )}
-                  {competitor2 > 0 && (
-                    <div>
-                      Competencia 2: $
-                      {competitor2.toLocaleString("es-AR", {
-                        minimumFractionDigits: 2,
-                      })}
-                      (
-                      {(
-                        ((competitor2 - calculatedPrices.baseSellingPrice) /
-                          calculatedPrices.baseSellingPrice) *
-                        100
-                      ).toFixed(1)}
-                      % diferencia)
-                    </div>
-                  )}
-                </div>
-              </div>
             )}
-
-            {basePrice > 0 && calculatedPrices.baseSellingPrice < basePrice && (
-              <div className="text-red-500 font-semibold">
-                ¡Advertencia! El precio a publicar no cubre los costos básicos.
+            {competitor2 > 0 && (
+              <div className="flex justify-between items-center">
+                <span>Precio Competencia 2:</span>
+                <span>
+                  $
+                  {competitor2.toLocaleString("es-AR", {
+                    minimumFractionDigits: 2,
+                  })}{" "}
+                  ({getDifferenceText(competitor2, calculatedPrices.finalPrice)}
+                  )
+                </span>
               </div>
             )}
           </div>

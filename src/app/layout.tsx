@@ -14,8 +14,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Migliore Cotizador",
-  description: "Cotizador de productos",
+  title: "MercadoTools",
+  description: "Herramientas para optimizar Procesos de Eccomerce",
 };
 
 export default function RootLayout({

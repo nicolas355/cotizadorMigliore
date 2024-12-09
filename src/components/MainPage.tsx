@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Calendar, DollarSign, Percent, Truck } from "lucide-react"
+import { Calendar, DollarSign, Percent, TrendingUp, Truck } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -22,7 +22,7 @@ import {
 
 export default function MainPage() {
   const [basePrice, setBasePrice] = useState<number>(0)
-  const [vat] = useState<string>("21")
+  const [vat, setVat] = useState<string>("21")
   const [installmentPlan, setInstallmentPlan] = useState<string>("0")
   const [shippingBuenosAires, setShippingBuenosAires] = useState<number>(0)
   const [shippingOutsideBuenosAires, setShippingOutsideBuenosAires] =
@@ -31,7 +31,7 @@ export default function MainPage() {
   const [competitor1, setCompetitor1] = useState<number>(0)
   const [competitor2, setCompetitor2] = useState<number>(0)
   const [minMargin, setMinMargin] = useState<number>(7.5)
-  const [desiredProfit] = useState<number>(4500)
+  const [desiredProfit, setDesiredProfit] = useState<number>(4500)
 
   // Comisión fija del marketplace
   const FIXED_COMMISSION = 14
@@ -73,28 +73,22 @@ export default function MainPage() {
     const priceWithBAShipping = priceWithProfit + shippingBuenosAires
     const priceWithOutsideShipping = priceWithProfit + shippingOutside
 
-
-    
-
     // 5. Ajustar por la comisión del marketplace (14%)
 
     // 6. Ajustar por la comisión de cuotas
     let averageShippingPrice =
       (priceWithBAShipping + priceWithOutsideShipping) / 2
 
+    // **Aplicar lógica de razonabilidad**
 
-        // **Aplicar lógica de razonabilidad**
+    if (useReasonability) {
+      const difference = Math.abs(shippingBuenosAires - shippingOutside)
+      const threshold = shippingBuenosAires * 0.3 // 30% como diferencia significativa
 
-
-
-        if (useReasonability) {
-          const difference = Math.abs(shippingBuenosAires - shippingOutside);
-          const threshold = shippingBuenosAires * 0.3; // 30% como diferencia significativa
-      
-          if (difference > threshold) {
-            averageShippingPrice *= 0.7; // Aplicar el 70% de descuento
-          }
-        }
+      if (difference > threshold) {
+        averageShippingPrice *= 0.7 // Aplicar el 70% de descuento
+      }
+    }
     const installmentCommission = parseFloat(installmentPlan) / 100
 
     const finalPrice = averageShippingPrice / (1 - FIXED_COMMISSION / 100)
@@ -160,26 +154,46 @@ export default function MainPage() {
         </CardTitle>
         <CardDescription className="text-center"></CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-12">
         {/* Primera Fila: Valor del Producto */}
-        <div className="flex justify-center">
-          <div className="flex items-center space-x-4">
+        <div className="grid grid-cols-2 gap-6">
+          <div className="flex items-start space-x-4">
             <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center">
               <DollarSign className="w-8 h-8 text-white" />
             </div>
-            <div>
+            <div className="flex-grow">
               <Label>Valor del Producto</Label>
               <Input
+                className="w-full"
                 type="number"
                 value={basePrice || ""}
                 onChange={(e) => setBasePrice(parseFloat(e.target.value) || 0)}
               />
             </div>
           </div>
+
+          {/* Select de IVA */}
+          <div className="flex items-start space-x-4">
+            <div className="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center">
+              <Percent className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-grow">
+              <Label>IVA (%)</Label>
+              <Select value={vat} onValueChange={(value) => setVat(value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Seleccionar IVA" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="21">21%</SelectItem>
+                  <SelectItem value="10.5">10.5%</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         {/* Segunda Sección: Todos los Campos en Tres Columnas */}
-        <div className="grid grid-cols-3 gap-8">
+        <div className="grid grid-cols-2 gap-6">
           {/* Comisión Fija */}
           <div className="flex items-start space-x-4">
             <div className="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center">
@@ -191,7 +205,6 @@ export default function MainPage() {
             </div>
           </div>
 
-          {/* Plan de Cuotas */}
           <div className="flex items-start space-x-4">
             <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center">
               <Calendar className="w-8 h-8 text-white" />
@@ -215,35 +228,17 @@ export default function MainPage() {
               </Select>
             </div>
           </div>
-
-          {/* Margen Mínimo Deseado (%) */}
-          <div className="flex items-start space-x-4 mt-4">
-            <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center">
-              <Percent className="w-8 h-8 text-white" />
-            </div>
-            <div className="flex-grow">
-              <Label>Margen Mínimo Deseado (%)</Label>
-              <Input
-                type="number"
-                value={minMargin || ""}
-                onChange={(e) => setMinMargin(parseFloat(e.target.value) || 0)}
-              />
-              <span className="text-sm text-gray-500 mt-2 block">
-                Margen aplicado:{" "}
-                {minMargin > 0 ? `${minMargin.toFixed(2)}%` : "Sin margen"}
-              </span>
-            </div>
-          </div>
         </div>
 
         <div className="grid grid-cols-3">
           {/* Costo de Envío */}
+
           <div className="flex items-start space-x-4">
             <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
               <Truck className="w-8 h-8 text-white" />
             </div>
             <div className="flex-grow">
-              <Label>Envío Provincia de Buenos Aires</Label>
+              <Label className="text-xs">Envío Provincia de Buenos Aires</Label>
               <Input
                 type="number"
                 value={shippingBuenosAires || ""}
@@ -254,13 +249,16 @@ export default function MainPage() {
             </div>
           </div>
 
+          {/* Margen Mínimo Deseado (%) */}
+
           {/* Envío Fuera de Buenos Aires */}
+
           <div className="flex items-start space-x-4">
             <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center">
               <Truck className="w-8 h-8 text-white" />
             </div>
             <div className="flex-grow">
-              <Label>Envío Fuera de Buenos Aires</Label>
+              <Label className="text-xs">Envío Fuera de Buenos Aires</Label>
               <Select
                 value={shippingOutsideBuenosAires}
                 onValueChange={setShippingOutsideBuenosAires}
@@ -308,7 +306,39 @@ export default function MainPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3">
+        <div className="grid grid-cols-2 gap-6">
+          <div className="flex items-start space-x-4">
+            <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center">
+              <TrendingUp className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-grow">
+              <Label>Margen de Ganancia Deseada ($)</Label>
+              <Input
+                type="number"
+                value={desiredProfit || ""}
+                onChange={(e) =>
+                  setDesiredProfit(parseFloat(e.target.value) || 0)
+                }
+              />
+         
+            </div>
+          </div>
+
+          <div className="flex items-start space-x-4 mt-4">
+            <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center">
+              <Percent className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-grow">
+              <Label>Margen Mínimo Deseado (%)</Label>
+              <Input
+                type="number"
+                value={minMargin || ""}
+                onChange={(e) => setMinMargin(parseFloat(e.target.value) || 0)}
+              />
+            
+            </div>
+          </div>
+
           {/* Precio Competencia 1 */}
           <div className="flex items-start space-x-4">
             <div className="w-16 h-16 bg-teal-500 rounded-full flex items-center justify-center">
@@ -328,7 +358,7 @@ export default function MainPage() {
 
           {/* Precio Competencia 2 */}
           <div className="flex items-start space-x-4">
-            <div className="w-16 h-16 bg-teal-500 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center">
               <DollarSign className="w-8 h-8 text-white" />
             </div>
             <div className="flex-grow">
@@ -436,6 +466,21 @@ export default function MainPage() {
               </span>
             </div>
           </div>
+                    <div className="flex justify-end">
+
+          <span className="text-sm text-gray-500 mt-2 block">
+                Ganancia actual:{" "}
+                {desiredProfit ? `$${desiredProfit}` : "No especificada"}
+              </span>
+              
+                    </div>
+
+                    <div className="flex justify-end">
+                    <span className="text-sm text-gray-500 mt-2 block">
+                Margen aplicado:{" "}
+                {minMargin > 0 ? `${minMargin.toFixed(2)}%` : "Sin margen"}
+              </span>
+                    </div>
 
           {/* Competencias */}
           <div className="mt-6 text-sm text-gray-500">

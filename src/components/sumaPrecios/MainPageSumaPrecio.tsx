@@ -1,18 +1,18 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react"
 
 export default function PriceCalculator() {
-  const [desiredPrice, setDesiredPrice] = useState('')
-  const [percentage, setPercentage] = useState('')
-  const [salePrice, setSalePrice] = useState('') // Precio con porcentaje aplicado
+  const [desiredPrice, setDesiredPrice] = useState("")
+  const [percentage, setPercentage] = useState("")
+  const [salePrice, setSalePrice] = useState("") // Precio con porcentaje aplicado
   const [salePriceNumeric, setSalePriceNumeric] = useState(0) // Precio sin formato
-  const [, setFinalPrice] = useState('') // Precio final después del 10%
-  const [realPrice, setRealPrice] = useState('') // Precio real al vendedor
+  const [, setFinalPrice] = useState("") // Precio final después del 10%
+  const [realPrice, setRealPrice] = useState("") // Precio real al vendedor
 
   // Formatear números
   const formatNumber = (num: number) => {
-    return num.toLocaleString('es-AR', {
+    return num.toLocaleString("es-AR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })
@@ -33,7 +33,8 @@ export default function PriceCalculator() {
       setFinalPrice(formatNumber(calculatedFinalPrice))
 
       // Calcular precio real (precio final + comisión del 3%)
-      const calculatedRealPrice = calculatedFinalPrice + calculatedSalePrice * 0.03
+      const calculatedRealPrice =
+        calculatedFinalPrice + calculatedSalePrice * 0.03
       setRealPrice(formatNumber(calculatedRealPrice))
     }
   }, [desiredPrice, percentage])
@@ -100,8 +101,13 @@ export default function PriceCalculator() {
               <div className="mt-2">
                 <span className="text-green-500 font-bold">10% OFF</span>
                 <div className="text-sm text-gray-600">
-                  <div>7% ${formatNumber(salePriceNumeric * 0.07)} a tu cargo</div>
-                  <div>3% ${formatNumber(salePriceNumeric * 0.03)} a cargo de Mercado Libre</div>
+                  <div>
+                    7% ${formatNumber(salePriceNumeric * 0.07)} a tu cargo
+                  </div>
+                  <div>
+                    3% ${formatNumber(salePriceNumeric * 0.03)} a cargo de
+                    Mercado Libre
+                  </div>
                 </div>
                 <div className="mt-1">
                   Precio final ${formatNumber(salePriceNumeric * 0.9)}
@@ -112,7 +118,9 @@ export default function PriceCalculator() {
 
           {/* Real Price */}
           <div className="flex justify-between items-center">
-            <span className="font-bold">PRECIO DE VENTA REAL (AL VENDEDOR)</span>
+            <span className="font-bold">
+              PRECIO DE VENTA REAL (AL VENDEDOR)
+            </span>
             <div className="bg-white p-2 min-w-[150px] text-right">
               {realPrice}
             </div>

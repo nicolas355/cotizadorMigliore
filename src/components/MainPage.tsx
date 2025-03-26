@@ -320,7 +320,6 @@ export default function MainPage() {
                   setDesiredProfit(parseFloat(e.target.value) || 0)
                 }
               />
-         
             </div>
           </div>
 
@@ -335,7 +334,6 @@ export default function MainPage() {
                 value={minMargin || ""}
                 onChange={(e) => setMinMargin(parseFloat(e.target.value) || 0)}
               />
-            
             </div>
           </div>
 
@@ -466,21 +464,19 @@ export default function MainPage() {
               </span>
             </div>
           </div>
-                    <div className="flex justify-end">
+          <div className="flex justify-end">
+            <span className="text-sm text-gray-500 mt-2 block">
+              Ganancia actual:{" "}
+              {desiredProfit ? `$${desiredProfit}` : "No especificada"}
+            </span>
+          </div>
 
-          <span className="text-sm text-gray-500 mt-2 block">
-                Ganancia actual:{" "}
-                {desiredProfit ? `$${desiredProfit}` : "No especificada"}
-              </span>
-              
-                    </div>
-
-                    <div className="flex justify-end">
-                    <span className="text-sm text-gray-500 mt-2 block">
-                Margen aplicado:{" "}
-                {minMargin > 0 ? `${minMargin.toFixed(2)}%` : "Sin margen"}
-              </span>
-                    </div>
+          <div className="flex justify-end">
+            <span className="text-sm text-gray-500 mt-2 block">
+              Margen aplicado:{" "}
+              {minMargin > 0 ? `${minMargin.toFixed(2)}%` : "Sin margen"}
+            </span>
+          </div>
 
           {/* Competencias */}
           <div className="mt-6 text-sm text-gray-500">

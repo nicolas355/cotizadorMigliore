@@ -1,24 +1,53 @@
-"use client";
+"use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react"
 
 export default function MainPageCheckPrice() {
-  const [price, setPrice] = useState<number>(0);
-  const [cuotas, setCuotas] = useState<string>("SIN CUOTAS");
-  const [envioTipo, setEnvioTipo] = useState<string>("1");
-  const [peso, setPeso] = useState<string>("De 1 a 2 Kg");
-  const [envioTipo1, setEnvioTipo1] = useState<number>(7000); // Editable valor para Envío Tipo 1
+  const [price, setPrice] = useState<number>(0)
+  const [cuotas, setCuotas] = useState<string>("Cuota promocionada")
+  const [envioTipo, setEnvioTipo] = useState<string>("1")
+  const [peso, setPeso] = useState<string>("De 1 a 2 Kg")
+  const [envioTipo1, setEnvioTipo1] = useState<number>(7000)
+  const [showEdit, setShowEdit] = useState<boolean>(false)
+
+  // Estado para almacenar los porcentajes de comisiones en forma decimal.
+  const [cuotasPorcentajes, setCuotasPorcentajes] = useState<
+    Record<string, number>
+  >({
+    "Cuota promocionada": 0.04,
+    "3 cuotas": 0.074,
+    "6 cuotas": 0.119,
+    "9 cuotas": 0.165,
+    "12 cuotas": 0.21,
+    "3 cuotas SIMPLE": 0.0655,
+    "6 cuotas SIMPLE": 0.1284,
+  })
+
+  // Al montar el componente, se intenta cargar la configuración guardada en localStorage.
+  useEffect(() => {
+    const savedData = localStorage.getItem("cuotasPorcentajes")
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData)
+        setCuotasPorcentajes(parsed)
+      } catch (error) {
+        console.error("Error al parsear los porcentajes guardados:", error)
+      }
+    }
+  }, [])
+
+  const handlePercentageChange = (key: string, value: number) => {
+    setCuotasPorcentajes((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const guardarCambios = () => {
+    localStorage.setItem("cuotasPorcentajes", JSON.stringify(cuotasPorcentajes))
+    alert("Los cambios se han guardado permanentemente.")
+  }
 
   const calcularResultado = () => {
-    // Comisiones y ajustes
-    const comision = price * 0.14;
-    let cuotaComision = 0;
-
-    // Cuotas
-    if (cuotas === "3 cuotas al mismo precio") cuotaComision = price * 0.085;
-    else if (cuotas === "6 cuotas al mismo precio") cuotaComision = price * 0.14;
-    else if (cuotas === "3 cuotas (CUOTA SIMPLE)") cuotaComision = price * 0.0643;
-    else if (cuotas === "6 cuotas (CUOTA SIMPLE)") cuotaComision = price * 0.1227;
+    // Se utiliza el porcentaje editado o por defecto según la opción de cuotas.
+    const cuotaComision = price * (cuotasPorcentajes[cuotas] || 0)
 
     // Envíos
     const envioTipo2Costos: Record<string, number> = {
@@ -29,15 +58,15 @@ export default function MainPageCheckPrice() {
       "De 15 a 20 Kg": 12441.5,
       "De 20 a 25 Kg": 14844,
       "De 25 a 30 Kg": 20374,
-    };
+    }
 
-    const envio = envioTipo === "1" ? envioTipo1 : envioTipo2Costos[peso];
+    const envio = envioTipo === "1" ? envioTipo1 : envioTipo2Costos[peso]
 
     // Total final
-    return price - comision - envio - cuotaComision;
-  };
+    return price - envio - cuotaComision
+  }
 
-  const resultado = calcularResultado();
+  const resultado = calcularResultado()
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
@@ -57,19 +86,52 @@ export default function MainPageCheckPrice() {
           />
         </div>
 
-        <div>
-          <label className="block font-medium">Cuotas</label>
-          <select
-            className="w-full mt-1 p-2 border rounded"
-            value={cuotas}
-            onChange={(e) => setCuotas(e.target.value)}
+        {/* Agrupamos el select de cuotas y el botón a la derecha en una fila */}
+        <div className="flex items-end gap-4">
+          <div className="flex-1">
+            <label className="block font-medium">Cuotas</label>
+            <select
+              className="w-full mt-1 p-2 border rounded"
+              value={cuotas}
+              onChange={(e) => setCuotas(e.target.value)}
+            >
+              <option value="Cuota promocionada">
+                Cuota promocionada | Pagás{" "}
+                {(cuotasPorcentajes["Cuota promocionada"] * 100).toFixed(2)}%
+              </option>
+              <option value="3 cuotas">
+                3 cuotas | Pagás{" "}
+                {(cuotasPorcentajes["3 cuotas"] * 100).toFixed(2)}%
+              </option>
+              <option value="6 cuotas">
+                6 cuotas | Pagás{" "}
+                {(cuotasPorcentajes["6 cuotas"] * 100).toFixed(2)}%
+              </option>
+              <option value="9 cuotas">
+                9 cuotas | Pagás{" "}
+                {(cuotasPorcentajes["9 cuotas"] * 100).toFixed(2)}%
+              </option>
+              <option value="12 cuotas">
+                12 cuotas | Pagás{" "}
+                {(cuotasPorcentajes["12 cuotas"] * 100).toFixed(2)}%
+              </option>
+              <option value="3 cuotas SIMPLE">
+                3 cuotas SIMPLE | Pagás{" "}
+                {(cuotasPorcentajes["3 cuotas SIMPLE"] * 100).toFixed(2)}%
+              </option>
+              <option value="6 cuotas SIMPLE">
+                6 cuotas SIMPLE | Pagás{" "}
+                {(cuotasPorcentajes["6 cuotas SIMPLE"] * 100).toFixed(2)}%
+              </option>
+            </select>
+          </div>
+
+          <button
+            className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 whitespace-nowrap"
+            onClick={() => setShowEdit(!showEdit)}
           >
-            <option value="SIN CUOTAS">SIN CUOTAS (0%)</option>
-            <option value="3 cuotas al mismo precio">3 cuotas al mismo precio (8.50%)</option>
-            <option value="6 cuotas al mismo precio">6 cuotas al mismo precio (14%)</option>
-            <option value="3 cuotas (CUOTA SIMPLE)">3 cuotas (CUOTA SIMPLE) (6.43%)</option>
-            <option value="6 cuotas (CUOTA SIMPLE)">6 cuotas (CUOTA SIMPLE) (12.27%)</option>
-          </select>
+            {showEdit ? "Ocultar edición" : "Editar porcentajes de cuotas"}
+          </button>
         </div>
 
         <div>
@@ -123,7 +185,35 @@ export default function MainPageCheckPrice() {
             Resultado: ${resultado.toFixed(2)}
           </p>
         </div>
+
+        {/* Panel de edición de porcentajes con inputs al 100% */}
+        {showEdit && (
+          <div className="mt-4 space-y-2 border-t pt-4">
+            {Object.keys(cuotasPorcentajes).map((key) => (
+              <div key={key} className="flex items-center space-x-2 w-full">
+                <label className="w-48 font-medium">{key} (%):</label>
+                <input
+                  type="number"
+                  className="flex-1 p-1 border rounded"
+                  value={(cuotasPorcentajes[key] * 100).toFixed(2)}
+                  onChange={(e) => {
+                    const newVal = parseFloat(e.target.value) / 100
+                    if (!isNaN(newVal)) {
+                      handlePercentageChange(key, newVal)
+                    }
+                  }}
+                />
+              </div>
+            ))}
+            <button
+              className="w-full mt-2 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              onClick={guardarCambios}
+            >
+              Aplicar cambios permanentemente
+            </button>
+          </div>
+        )}
       </div>
     </main>
-  );
+  )
 }

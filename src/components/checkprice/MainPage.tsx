@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 
 export default function MainPageCheckPrice() {
   const [price, setPrice] = useState<number>(0)
-  const [cuotas, setCuotas] = useState<string>("Cuota promocionada")
+  const [cuotas, setCuotas] = useState<string>("Sin cuotas")
   const [envioTipo, setEnvioTipo] = useState<string>("3")
   const [peso, setPeso] = useState<string>("De 5 a 10 Kg")
   const [envioTipo1, setEnvioTipo1] = useState<number>(0)
@@ -21,6 +21,7 @@ export default function MainPageCheckPrice() {
     "12 cuotas": 0.21,
     "3 cuotas SIMPLE": 0.0655,
     "6 cuotas SIMPLE": 0.1284,
+    "Sin cuotas": 0.0,
   })
 
   // Cargar configuración de cuotas desde localStorage (si existe)
@@ -112,6 +113,11 @@ export default function MainPageCheckPrice() {
               value={cuotas}
               onChange={(e) => setCuotas(e.target.value)}
             >
+              {/* Colocamos "Sin cuotas" primero */}
+              <option value="Sin cuotas">
+                Sin cuotas | Pagás{" "}
+                {((cuotasPorcentajes["Sin cuotas"] || 0) * 100).toFixed(2)}%
+              </option>
               <option value="Cuota promocionada">
                 Cuota promocionada | Pagás{" "}
                 {(cuotasPorcentajes["Cuota promocionada"] * 100).toFixed(2)}%

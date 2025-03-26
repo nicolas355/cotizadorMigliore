@@ -86,7 +86,7 @@ export default function MainPageCheckPrice() {
   })
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
+    <main className="flex flex-col items-center justify-center  p-4 bg-gray-100">
       <h1 className="text-2xl font-bold mb-4">Revisar Precios Competencia</h1>
 
       <div className="w-full max-w-lg bg-white rounded-lg shadow-md p-6 space-y-4">

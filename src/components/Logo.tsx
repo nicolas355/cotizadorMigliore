@@ -1,16 +1,17 @@
-import {  Paintbrush } from "lucide-react"
 import Link from "next/link"
-
+import logoMigliore from "/public/logoMigliore.png"
+import Image from "next/image"
 export default function Logo() {
-    return (
-      <div className="flex items-center">
-                  <Paintbrush className="h-8 w-8 mr-2 text-[#F5201A]" />
+  return (
+    <div className="flex gap-2 items-center">
+      <Image width={60} height={60} src={logoMigliore} alt="logo" />
 
-
-          <Link href={'/'}>    <span className="font-bold text-xl">MercadoTools</span></Link>
-    
-      </div>
-    )
-  }
-  
-  
+      <Link href={"/"}>
+        {" "}
+        <span className="font-bold font-poppins  text-xl">
+          Migliore Company{" "}
+        </span>
+      </Link>
+    </div>
+  )
+}
